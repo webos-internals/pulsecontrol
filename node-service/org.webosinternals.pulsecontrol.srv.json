@@ -1,0 +1,14 @@
+{
+  "role": {
+     "exeName":"js",
+     "type": "privileged",
+     "allowedNames": ["org.webosinternals.pulsecontrol.srv"]
+  },
+  "permissions": [
+    {
+      "service":"org.webosinternals.pulsecontrol.srv",
+      "inbound":["*"],
+      "outbound":["*"]
+    }
+  ]
+}

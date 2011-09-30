@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Handle execution as pmPostInstall.script
+if [ -z "$IPKG_OFFLINE_ROOT" ]; then
+  IPKG_OFFLINE_ROOT=/media/cryptofs/apps
+  mount -o remount,rw /
+fi
+
+SRV_ID=org.webosinternals.pulsecontrol.srv
+SRV_DIR=/media/cryptofs/apps/usr/palm/services/${SRV_ID}
+
+/usr/bin/ls-control scan-services || true

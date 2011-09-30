@@ -1,0 +1,28 @@
+.accounts-header img {
+	display: block;
+	margin-right: 10px;
+}
+
+.accounts-header-shadow {
+	position: absolute; 
+	z-index: 100;
+	height: 3px;
+	width: 100%;
+	pointer-events: none;
+	top: 54px;
+	background: transparent url('../images/light_chrome_drop_shadow_header.png') bottom repeat-x;
+}
+
+.box-center {
+	width: 500px;
+	margin: 12px auto 0;
+}
+
+.box-center .enyo-spinner{
+	margin-right: 8px;
+}
+
+.box-center.enyo-scroller-scrollee {
+	padding-bottom: 30px;
+}
+

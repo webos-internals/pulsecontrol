@@ -1,0 +1,12 @@
+{
+  "id": "org.webosinternals.pulsecontrol",
+  "package_format_version": 2,
+  "loc_name": "PulseAudio Settings",
+  "version": "0.1.0",
+  "icon": "icon.png",
+  "miniicon": "icon.png",
+  "vendor": "WebOS Internals",
+  "vendorurl": "www.webos-internals.org",
+  "app": "org.webosinternals.pulsecontrol",
+  "services": ["org.webosinternals.pulsecontrol.srv"]
+}

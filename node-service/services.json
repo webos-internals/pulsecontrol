@@ -1,0 +1,14 @@
+{
+	"id": "org.webosinternals.pulsecontrol.srv",
+	"description": "PulseAudio Control Service",
+	"services": [ {
+		"name": "org.webosinternals.pulsecontrol.srv",
+		"description": "PulseAudio Control Service",
+
+		"commands": [ {
+			"name": "control", 
+			"assistant": "ControlAssistant",
+			"public": true
+		} ] 
+	} ]
+}
