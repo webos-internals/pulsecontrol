@@ -94,61 +94,23 @@ ControlAssistant.prototype.apply = function(future, config, args) {
 	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
 	if(config.tcpServer)
-		var cmd = bin + " enable";
+		future.nest(this.execute(bin + " enable"));
 	else
-		var cmd = bin + " disable";
+		future.nest(this.execute(bin + " disable"));
 
-	exec(cmd, function(future, config, args, error, stdout, stderr) {
-		if(error !== null) { 
-			error.errorCode = error.code;
+	future.then(this, function(future) {
+		future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
 
-			future.exception = error;
-		} else {
+		future.then(this, function(future) {
+			if(future.result.wifi) {
+				args.$activity = {trigger: future.result};
 
-
-
-/*	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
-
-	if(config.tcpServer)
-		var cmd = bin + " enable";
-	else
-		var cmd = bin + " disable";
-
-	exec(cmd, function(future, config, args, error, stdout, stderr) {
-		if(error !== null) { 
-			error.errorCode = error.code;
-console.error("AAAA1");
-		//	future.exception = error;
-		} else {
-
-
-			cmd = bin + " disconnect";
-
-			exec(cmd, function(future, config, args, error, stdout, stderr) {
-				if(error !== null) { 
-					error.errorCode = error.code;
-
-					future.exception = error;
-				} else {
-						console.error("AAAA2");
-					future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
-		console.error("AAAA2b");
-					future.then(this, function(future) {
-					console.error("AAAA3");
-						if(future.result.wifi) {
-							args.$activity = {trigger: future.result};
-
-							this.check(future, config, args);
-
-						console.error("AAAA4");
-						}
-//						else
-							//future.result = { returnValue: true };
-					});
-				}
-			}.bind(this, future, config, args));
-		}
-	}.bind(this, future, config, args));*/
+				this.check(future, config, args);
+			} else {
+				future.result = { returnValue: true };
+			}
+		});
+	});
 };
 
 ControlAssistant.prototype.check = function(future, config, args) {
@@ -197,64 +159,77 @@ ControlAssistant.prototype.check = function(future, config, args) {
 
 ControlAssistant.prototype.connect = function(future, config, args) {
 	if((args.address) && (args.sinks)) {
+		var addr = args.address, sinks = args.sinks;
+	
 		var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
-		var cmd = bin + " connect " + args.address + " " + args.sinks;
+		future.nest(this.execute(bin + " connect " + addr + " " + sinks));
 
-		exec(cmd, function(future, addr, sinks, error, stdout, stderr) {
-			if(error !== null) { 
-				error.errorCode = error.code;
-
-				future.exception = error;
-			} else {
-				if((stdout) && (stdout.slice(0, 16) == "Connection error")) {
-					future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-						'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error"}}));
-				} else if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
-					future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-						'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
-				} else {			
-					future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-						'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "auto",
-							'address': addr, 'sinks': sinks}}));
-				}
-								
-				future.then(this, function(future) {
-					future.result = { returnValue: true };
-				});
+		future.then(this, function(future) {
+			var stdout = future.result.stdout;
+		
+			if((stdout) && (stdout.slice(0, 16) == "Connection error")) {
+				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error"}}));
+			} else if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
+				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+			} else {			
+				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "auto",
+						'address': addr, 'sinks': sinks}}));
 			}
-		}.bind(this, future, args.address, args.sinks));
+						
+			future.then(this, function(future) {
+				future.result = { returnValue: true };
+			});
+		});
 	} else {
 		future.result = { returnValue: true };
 	}
 };
 
 ControlAssistant.prototype.disconnect = function(future, config, args) {
+	var addr = args.address, sinks = args.sinks;
+
 	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
-	var cmd = bin + " disconnect";
+	future.nest(this.execute(bin + " disconnect"));
+
+	future.then(this, function(future) {
+		var stdout = future.result.stdout;
+
+		if((addr != undefined) && (sinks != undefined)) {
+			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
+				'address': addr, 'sinks': sinks}}));
+		} else {
+			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+		}
+				
+		future.then(this, function(future) {
+			future.result = { returnValue: true };
+		});
+	});
+};
+
+//
+
+ControlAssistant.prototype.execute = function(cmd) {
+	var future = new Future();
 	
-	exec(cmd, function(future, addr, sinks, error, stdout, stderr) {
+	exec(cmd, function(error, stdout, stderr) {
 		if(error !== null) { 
 			error.errorCode = error.code;
-
+			
 			future.exception = error;
 		} else {
-			console.error("HHH1 " + stdout);
-
-			if((addr) && (sinks)) {
-				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
-					'address': addr, 'sinks': sinks}}));
-			} else {
-				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
-			}
-					
-			future.then(this, function(future) {
-				future.result = { returnValue: true };
-			});
+			future.result = { returnValue: true, 
+				stdout: stdout, stderr: stderr};
 		}
-	}.bind(this, future, args.address, args.sinks));
+	}.bind(this));
+
+	return future;
 };
 
