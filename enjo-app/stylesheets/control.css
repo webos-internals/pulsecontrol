@@ -15,6 +15,9 @@
 
 .box-center {
 	width: 500px;
+	max-width: 100%;
+	padding-left: 5px;
+	padding-right: 5px;
 	margin: 12px auto 0;
 }
 
@@ -24,5 +27,15 @@
 
 .box-center.enyo-scroller-scrollee {
 	padding-bottom: 30px;
+}
+
+.enyo-button-affirmative {
+	max-width: 100%;
+	-webkit-box-sizing: border-box;
+}
+
+.enyo-button-light {
+	max-width: 100%;
+	-webkit-box-sizing: border-box;
 }
 

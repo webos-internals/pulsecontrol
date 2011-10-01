@@ -5,15 +5,13 @@ enyo.kind({
 	
 	_ready: false,
 	
-	_prefs: {paServers: [], tcpServer: false, wifiSinks: []},
+	_prefs: {paServers: [], tcpServer: false, wifiSinks: ["pmedia"]},
 	
 	_sinks: ["palarm", "palerts", "pcalendar", "pdefaultapp", "pDTMF", "peffects", "pfeedback", 
 		"pflash", "pmedia", "pnavigation", "pnotifications", "pringtones", "pvoicedial", "pvoip", "pvvm"
 	],
 	
 	components: [
-      { kind: "ApplicationEvents", onApplicationRelaunch: "applicationRelaunchHandler" },
-
 		{kind: "AppMenu", components: [
 			 {caption: "Reset PulseAudio", onclick: "restartPulseAudio"}
 		]},
@@ -33,23 +31,24 @@ enyo.kind({
 			{kind: "Control", content: $L("PulseAudio Settings")}
 		]},
 		{className:"accounts-header-shadow"},
-    	{kind:"Scroller", flex:1, components:[
-			{kind:"Pane", flex:1, components:[
-				{kind: "HFlexBox", className:"box-center enyo-bg", flex:1, pack:"center", align:"center", components: [
+		
+    	{name: "mainScroller", kind:"Scroller", flex:1, components: [
+	    	{kind:"Pane", flex:1, components:[
+				{kind: "HFlexBox", className:"box-center enyo-bg", style: "position: relative;top: -50px;",flex:1, pack:"center", align:"center", components: [
 					{kind:"Spinner", name: "getStatusSpinner"},
 						{content: $L("Loading PulseAudio Settings...")}
 				]},
 				{kind:"Control", name:"prefView", className:"box-center enyo-bg", components: [                               
 					{layoutKind: "VFlexLayout", align: "center", style: "min-width: 100%;", components: [
-					  	{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;", components: [
-							{kind: "RowGroup", flex: 1, caption: "PulseAudio Client Settings", components: [
+					  	{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;max-width: 100%;", components: [
+							{kind: "RowGroup", flex: 1, caption: "Client Settings", components: [
 								{name: "configuredServers", kind: "VirtualRepeater", onSetupRow: "getConfiguredServer", style: "margin: -10px;", components: [
-									{name: "serverItem", kind: "SwipeableItem", layoutKind: "HFlexLayout", align: "center", flex: 1, tapHighlight: true, onConfirm: "delPulseAudioServer", components: [
+									{name: "serverItem", kind: "SwipeableItem", style: "padding-top:1px;padding-bottom:0px;", layoutKind: "HFlexLayout", align: "center", flex: 1, tapHighlight: true, onConfirm: "delPulseAudioServer", components: [
 										{layoutKind: "HFlexLayout", flex: 1, tapHighlight: true, components: [
-											{name: "serverName", kind: "Input", flex:1, style: "margin-left: -8px; margin-right: 0px;", hint: "SSID", onchange: "handleServerName"},
-											{name: "serverAddr", kind: "Input", flex:1, style: "margin-left: 0px; margin-right: 10px; text-align: right;", hint: "Address", onchange: "handleServerAddr"},
+											{name: "serverName", kind: "Input", flex:1, style: "margin-left: -14px; margin-right: -2px;", hint: "SSID", onchange: "handleServerName"},
+											{name: "serverAddr", kind: "Input", flex:2, style: "margin-left: 0px; margin-right: 5px;", hint: "Address", onchange: "handleServerAddr"},
 										]},
-										{name: "serverMode", kind: "ListSelector", value: "auto", width: "50px;", onChange: "handleServerMode", items: [
+										{name: "serverMode", kind: "ListSelector", value: "auto", width: "60px;", onChange: "handleServerMode", items: [
 											{caption: "Ask", value: "manual"}, {caption: "Auto", value: "auto"}
 										]}
 									]}
@@ -61,8 +60,8 @@ enyo.kind({
 							]}
 						]},
 
-						{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;", components: [
-							{kind: "RowGroup", flex: 1, caption: "PulseAudio Server Settings", components: [
+						{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;max-width: 100%;", components: [
+							{kind: "RowGroup", flex: 1, caption: "Server Settings", components: [
 								{kind: "Item", layoutKind: "HFlexLayout", components: [
 									{content: "Allow Client Connections", flex: 1},
 									{name: "serverEnabled", kind: "ToggleButton", onLabel: "On", offLabel: "Off", state: false, onChange: "handleServerToggle"}
@@ -70,10 +69,19 @@ enyo.kind({
 							]},
 						]},
 						
-						{name: "applySettingsButton", kind: "Button", className: "enyo-button-affirmative", width: "470px", caption: "Apply Configuration", onclick: "handleApplySettings"},
-						
-						{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;", components: [
-							{kind: "RowGroup", flex: 1, caption: "Network Audio Sources", components: [
+						{style: "padding-top:6px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
+							{name: "applySettingsButton", kind: "Button", className: "enyo-button-affirmative", width: "488px", caption: "Apply Configuration", onclick: "handleApplySettings"},
+						]},
+						{style: "padding-top:0px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
+							{kind: "Button", className: "enyo-button-light", width: "488px", caption: "Show Audio Sources", onclick: "handleEditAdvanced"},
+						]}
+					]},
+				]},
+
+				{kind:"Control", name:"sinkView", className:"box-center enyo-bg", components: [                               						
+					{layoutKind: "VFlexLayout", align: "center", style: "min-width: 100%;", components: [
+						{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;max-width: 100%;", components: [
+							{kind: "RowGroup", flex: 1, caption: "Wi-Fi Audio Sources", components: [
 								{kind: "Item", layoutKind: "HFlexLayout", components: [
 									{content: "Alarm", flex: 1},
 									{name: "palarm", kind: "ToggleButton", onLabel: "On", offLabel: "Off", state: false, onChange: "handleSourceToggle"}
@@ -135,7 +143,11 @@ enyo.kind({
 									{name: "pvvm", kind: "ToggleButton", onLabel: "On", offLabel: "Off", state: false, onChange: "handleSourceToggle"}
 								]}
 							]}
-						]}
+						]},
+						
+						{style: "padding-top:6px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
+							{kind: "Button", className: "enyo-button-light", width: "488px", caption: "Back", onclick: "handleEditBasic"},
+						]}						
 					]}
 				]}
 			]}
@@ -151,31 +163,14 @@ enyo.kind({
 	create: function() {
 		this.inherited(arguments);
 
+		if(enyo.fetchDeviceInfo().modelNameAscii != "TouchPad")
+			enyo.setAllowedOrientation("up");
+
 		this.$.controlDashboard.create();
-		
+	
 		this.$.getStatusSpinner.show();
 
 		this.$.loadPreferences.call();
-	},
-
-	applicationRelaunchHandler: function(inSender) {
-		if(enyo.windowParams.dashboard == "auto") {
-			enyo.windows.addBannerMessage("PulseAudio network server connected", "{}", "images/icon-dash.png");
-
-			this.$.controlDashboard.setLayers([{icon: "images/icon.png", 
-				title: "Connected to: " + enyo.windowParams.address, text: "Tap to disconnect the server",
-					action: "disconnect", address: enyo.windowParams.address, sinks: enyo.windowParams.sinks}]);
-		} else if(enyo.windowParams.dashboard == "manual") {
-			enyo.windows.addBannerMessage("PulseAudio network server available", "{}", "images/icon-dash.png");
-
-			this.$.controlDashboard.setLayers([{icon: "images/icon.png", 
-				title: "Server available: " + enyo.windowParams.address, text: "Tap to connect the server",
-					action: "connect", address: enyo.windowParams.address, sinks: enyo.windowParams.sinks}]);
-		} else if(enyo.windowParams.dashboard == "error") {
-			enyo.windows.addBannerMessage("PulseAudio server connection failed", "{}", "images/icon-dash.png");
-		} else if(enyo.windowParams.dashboard == "none") {
-			this.$.controlDashboard.setLayers([]);
-		}
 	},
 
 	handleDashboardTap: function(inSender, topLayer, event) {
@@ -243,6 +238,18 @@ enyo.kind({
 		this.$.applySettingsButton.setDisabled(true);
 		
 		this.$.pulseControlSrv.call({action: "apply"});
+	},
+
+	handleEditAdvanced: function(inSender, inEvent) {
+		this.$.mainScroller.scrollIntoView(0,0);
+
+		this.$.pane.selectViewByName("sinkView", true);
+	},
+
+	handleEditBasic: function(inSender, inEvent) {
+		this.$.mainScroller.scrollIntoView(0,0);
+		
+		this.$.pane.selectViewByName("prefView", true);
 	},
 
 	handleServerName: function(inSender, inEvent) {
