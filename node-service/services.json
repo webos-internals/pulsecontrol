@@ -4,6 +4,7 @@
 	"services": [ {
 		"name": "org.webosinternals.pulsecontrol.srv",
 		"description": "PulseAudio Control Service",
+		"assistant": "ServiceAssistant",
 
 		"commands": [ {
 			"name": "control", 

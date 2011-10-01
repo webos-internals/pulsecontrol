@@ -4,5 +4,8 @@
 	},
 	{ 
 		"source": "assistants/control-assistant.js" 
+	},
+	{ 
+		"source": "assistants/service-assistant.js" 
 	}
 ]

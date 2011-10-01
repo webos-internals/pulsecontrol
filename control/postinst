@@ -9,4 +9,8 @@ fi
 SRV_ID=org.webosinternals.pulsecontrol.srv
 SRV_DIR=/media/cryptofs/apps/usr/palm/services/${SRV_ID}
 
+mkdir -p /var/palm/event.d
+
+cp -f ${SRV_DIR}/configuration/event.d/${SRV_ID} /var/palm/event.d/
+
 /usr/bin/ls-control scan-services || true

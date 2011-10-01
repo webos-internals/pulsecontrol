@@ -3,6 +3,7 @@ APPID = org.webosinternals.pulsecontrol
 package: clean
 	cp -a c-binary node-service/bin
 	rm -f node-service/bin/*.c
+	rm -f node-service/bin/Makefile
 	palm-package enjo-app package node-service
 	rm -rf node-service/bin
 	ar q ${APPID}_*.ipk pmPostInstall.script

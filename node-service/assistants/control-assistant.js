@@ -18,22 +18,22 @@ var ControlAssistant = function() {
 };
   
 ControlAssistant.prototype.run = function(future) {
-	if((!this.controller.args) || (!this.controller.args.action))
+	if((!this.controller.args) || (!this.controller.args.action)) {
 		future.result = { returnValue: false };
-//	else if(this.controller.args.action == "subscribe")
-//		this.init(future);
-	else {
-		future.nest(this.load());
+	} else {
+		future.nest(this.db());
 		
 		future.then(this, function(future) {
 			var config = future.result;
-		
-			if(this.controller.args.action == "reset")
+
+			if(this.controller.args.action == "init")
+				this.init(future, config, this.controller.args);
+			else if(this.controller.args.action == "reset")
 				this.reset(future, config, this.controller.args);
 			else if(this.controller.args.action == "apply")
 				this.apply(future, config, this.controller.args);
 			else if(this.controller.args.action == "check")
-				this.check(future, config, this.controller.args);
+				this.init(future, config, this.controller.args);
 			else if(this.controller.args.action == "connect")
 				this.connect(future, config, this.controller.args);
 			else if(this.controller.args.action == "disconnect")
@@ -46,7 +46,7 @@ ControlAssistant.prototype.run = function(future) {
 
 //
 
-ControlAssistant.prototype.load = function() {
+ControlAssistant.prototype.db = function() {
 	var future = DB.find({ from: DB_KIND, limit: 2 });
 	
 	future.then(this, function(future) {
@@ -67,6 +67,42 @@ ControlAssistant.prototype.load = function() {
 };
 
 //
+
+ControlAssistant.prototype.init = function(future, config, args) {
+	var newActivity = {
+		"start" : true,
+		"replace": true,
+		"activity": {
+			"name": "wireless",
+			"description" : "Wireless Network Monitor",
+			"type": {"foreground": true, "persist": false},
+			"trigger" : {
+				"method" : "palm://com.palm.connectionmanager/getstatus",
+				"params" : {'subscribe': true}
+			},
+			"callback" : {
+				"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
+				"params" : {"action": "check"}
+			}
+		}
+	};
+
+	future.nest(PalmCall.call("palm://com.palm.activitymanager", "create", newActivity));
+
+	future.then(this, function(future) {
+		future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
+		
+		future.then(this, function(future) {
+			if(future.result.wifi) {
+				args.wifi = future.result.wifi;
+
+				this.check(future, config, args);
+			} else {
+				future.result = { returnValue: false };	
+			}
+		});						
+	});
+};
 
 ControlAssistant.prototype.reset = function(future, config, args) {
 	var cmd = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh reset";
@@ -93,46 +129,78 @@ ControlAssistant.prototype.reset = function(future, config, args) {
 ControlAssistant.prototype.apply = function(future, config, args) {
 	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
-	if(config.tcpServer)
-		future.nest(this.execute(bin + " enable"));
-	else
-		future.nest(this.execute(bin + " disable"));
+	if(config.tcpServer) {
+		var method = "create";
 
-	future.then(this, function(future) {
-		future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
-
-		future.then(this, function(future) {
-			if(future.result.wifi) {
-				args.$activity = {trigger: future.result};
-
-				this.check(future, config, args);
-			} else {
-				future.result = { returnValue: true };
+		var activity = {
+			"start" : true,
+			"replace": true,
+			"activity": {
+				"name": "firewall",
+				"description" : "Open PulseAudio Port",
+				"type": {"cancellable": true, "foreground": true, "persist": false},
+				"trigger" : {
+					"method" : "palm://com.palm.firewall/control",
+					"params" : {'subscribe': true, "rules": [
+						{"protocol": "TCP", "destinationPort": 4713}]}
+				},
+				"callback" : {
+					"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
+					"params" : {"action":"none"}
+				}
 			}
+		};
+		
+		future.nest(this.execute(bin + " enable"));
+	} else {
+		var method = "cancel";
+
+		var activity = { activityName: "firewall" };
+		
+		future.nest(this.execute(bin + " disable"));
+	}
+	
+	future.then(this, function(future) {
+		future.nest(PalmCall.call("palm://com.palm.activitymanager", method, activity));
+		
+		future.then(this, function(future) {
+			var exception = future.exception;
+		
+			future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
+
+			future.then(this, function(future) {
+				if(future.result.wifi) {
+					args.wifi = future.result.wifi;
+
+					this.check(future, config, args);
+				} else {
+					future.result = { returnValue: true };
+				}
+			});			
 		});
-	});
+	});		
 };
 
 ControlAssistant.prototype.check = function(future, config, args) {
 	var addr = null, mode = null, sinks = null;
 
-	if((args.$activity) && (args.$activity.trigger) && (args.$activity.trigger.wifi)) {
-		if((future.result.wifi.state == "connected") && (future.result.wifi.ssid)) {
-			var ssid = future.result.wifi.ssid.toLowerCase();
+	if((args.wifi.state == "connected") && (args.wifi.ssid)) {
+		var ssid = args.wifi.ssid.toLowerCase();
 
-			for(var i = 0; i < config.paServers.length; i++) {
-				if(config.paServers[i].ssid.toLowerCase() == ssid) {
-					sinks = config.wifiSinks.toString();
+		for(var i = 0; i < config.paServers.length; i++) {
+			if(config.paServers[i].ssid.toLowerCase() == ssid) {
+				sinks = config.wifiSinks.toString();
 
-					addr = config.paServers[i].address;
+				addr = config.paServers[i].address;
 
-					mode = config.paServers[i].mode;
-										
-					break;				
-				}
+				mode = config.paServers[i].mode;
+								
+				break;				
 			}
 		}
-
+	}
+	
+	if((args.wifi.state == "connected") || (args.wifi.state == "disconnected")) {
 		if((addr != null) && (sinks != null) && (mode == "manual")) {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
 				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
@@ -144,14 +212,14 @@ ControlAssistant.prototype.check = function(future, config, args) {
 		} else {
 			if((addr != null) && (sinks != null)) {
 				args = {address: addr, sinks: sinks};
-			
+
 				this.connect(future, config, args);
 			} else {
 				this.disconnect(future, config, args);
 			}
 		}
 	} else {
-		future.result = { returnValue: true };
+		future.result = { returnValue: true };				
 	}
 };
 

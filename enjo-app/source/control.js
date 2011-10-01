@@ -22,9 +22,9 @@ enyo.kind({
 			icon: "images/icon.png", onMessageTap: "handleDashboardTap", onIconTap: "handleDashboardTap"},
 		
 		{name:"errorDialog", kind: "Dialog", components: [
-        {content: "There was some unknown error while calling the service!", style: "padding: 10px;"},
+        {content: "There was some unknown error while calling the service!", style: "padding: 5px 15px 10px 15px;"},
         {layoutKind: "HFlexLayout", pack: "center", components: [
-            {kind: "Button", caption: "OK", onclick: "hideErrorDialog"}
+            {kind: "Button", caption: "OK", width: "100%", onclick: "hideErrorDialog"}
         ]}
    	]},
    	

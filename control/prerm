@@ -11,6 +11,8 @@ SRV_DIR=/media/cryptofs/apps/usr/palm/services/${SRV_ID}
 
 rm -f /var/cache/configurator/_media_cryptofs_apps_usr_palm_services_${SRV_ID}_configuration_db_permissions_${SRV_ID}
 
+rm -f /var/palm/event.d/${SRV_ID}
+
 #/usr/bin/pkill switcher.srv.js || true
 
 /usr/bin/ls-control scan-services || true
