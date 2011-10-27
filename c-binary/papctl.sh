@@ -144,7 +144,7 @@ case ${1} in
 						esac
 
 						if [ ! -z "${NO}" ]; then
-							${DIR}/papctl "O ${NO} 2 0"
+							${DIR}/papctl "O ${NO} 3 0"
 						fi
 					done
 				else
@@ -224,7 +224,7 @@ case ${1} in
 				esac
 
 				if [ ! -z "${NO}" ]; then
-					${DIR}/papctl "O ${NO} 2 0"
+					${DIR}/papctl "O ${NO} 3 0"
 				fi
 			done
 		fi
