@@ -2,303 +2,330 @@
 
 export HOME="/home/root"
 
+#
+# HELP FUNCTIONS
+#
+
+get_vsink_id() {
+  case ${1} in
+    palerts) echo "0" ;;
+    pnotifications) echo "1" ;;
+    pfeedback) echo "2" ;;
+    pringtones) echo "3" ;;
+    pmedia) echo "4" ;;
+    pflash) echo "5" ;;
+    pnavigation) echo "6" ;;
+    pvoicedial) echo "7" ;;
+    pvvm) echo "8" ;;
+    pvoip) echo "9" ;;
+    pdefaultapp) echo "10" ;;
+    peffects) echo "11" ;;
+    pDTMF) echo "12" ;;
+    pcalendar) echo "13" ;;
+    palarm) echo "14" ;;
+  esac
+}
+
+#
+# MAIN FUNCTION
+#
+
 mkdir -p /home/root >/dev/null 2>&1
 
 DIR=$(dirname ${0})
 
 if [ -z "${1}" ]; then
-	exit 0
+  exit 0
 fi
 
 if [ -e /tmp/papctl-lock ]; then
-	exit 0
+  exit 0
 fi
 
 case ${1} in
-	reset)
-		touch /tmp/papctl-lock
+  reset)
+    touch /tmp/papctl-lock
 
-		COUNT="0";
+    COUNT="0";
 
-		while [ ${COUNT} -lt 15 ]; do
-			${DIR}/papctl "C ${COUNT} 0 0"
+    while [ ${COUNT} -lt 15 ]; do
+      ${DIR}/papctl "C ${COUNT} 0 0"
 
-			let COUNT="${COUNT} + 1"
-		done
+      let COUNT="${COUNT} + 1"
+    done
 
-		if [ -e "/tmp/papctl-listen" ]; then
-			CUR_LISTEN=$(cat /tmp/papctl-listen)
+    if [ -e "/tmp/papctl-usbmod" ]; then
+      USB_MODULE=$(cat /tmp/papctl-usbmod)
 
-			/usr/bin/pactl unload-module ${CUR_LISTEN}
-		fi
+      /usr/bin/pactl unload-module ${USB_MODULE}
+    fi
 
-		if [ -e "/tmp/papctl-module" ]; then
-			CUR_MODULE=$(cat /tmp/papctl-module)
+    if [ -e "/tmp/papctl-netmod" ]; then
+      NET_MODULE=$(cat /tmp/papctl-netmod)
 
-			/usr/bin/pactl unload-module ${CUR_MODULE}
-		fi
+      /usr/bin/pactl unload-module ${NET_MODULE}
+    fi
 
-		sleep 2
+    if [ -e "/tmp/papctl-listen" ]; then
+      CUR_LISTEN=$(cat /tmp/papctl-listen)
 
-		rm -f /tmp/papctl-listen
-		rm -f /tmp/papctl-module
-		rm -f /tmp/papctl-server
-		rm -f /tmp/papctl-vsinks
-		;;
+      /usr/bin/pactl unload-module ${CUR_LISTEN}
+    fi
 
-	connect)
-		if [ -z "${2}" ]; then
-			exit 1
-		fi
+    sleep 3
 
-		touch /tmp/papctl-lock
+    rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+    rm -f /tmp/papctl-usbmod >/dev/null 2>&1
+    rm -f /tmp/papctl-netmod >/dev/null 2>&1
+    rm -f /tmp/papctl-server >/dev/null 2>&1
+    rm -f /tmp/papctl-listen >/dev/null 2>&1
+    ;;
 
-		SERVER="${2}" ; VSINKS="${3}"
+  usbon)
+    touch /tmp/papctl-lock
 
-		CUR_SERVER="" ; CUR_MODULE="" ; CUR_VSINKS=""
+    VSINKS="${2}"
 
-		if [ -e "/tmp/papctl-server" ]; then
-			CUR_SERVER=$(cat /tmp/papctl-server)
-		fi
+    if [ -e "/tmp/papctl-vsinks" ]; then
+      cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
 
-		if [ -e "/tmp/papctl-module" ]; then
-			CUR_MODULE=$(cat /tmp/papctl-module)
-		fi
+      cat /tmp/papctl-list | while read SINK ; do
+        ID=$(get_vsink_id ${SINK})
 
-		if [ -e "/tmp/papctl-vsinks" ]; then
-			CUR_VSINKS=$(cat /tmp/papctl-vsinks)
-		fi
+        if [ ! -z "${ID}" ]; then
+          ${DIR}/papctl "C ${ID} 0 0"
+        fi
+      done
 
-		if [ "${SERVER}" != "${CUR_SERVER}" ]; then
-			echo "${SERVER}" >/tmp/papctl-server
+      sleep 1
+    fi
 
-			if [ -e "/tmp/papctl-vsinks" ]; then
-				cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
+    if [ -e "/tmp/papctl-usbmod" ]; then
+      USB_MODULE=$(cat /tmp/papctl-usbmod)
 
-				cat /tmp/papctl-list | while read SINK ; do
-					NO=""
+      /usr/bin/pactl unload-module ${USB_MODULE}
 
-					case ${SINK} in
-						palerts) NO="0" ;;
-						pnotifications) NO="1" ;;
-						pfeedback) NO="2" ;;
-						pringtones) NO="3" ;;
-						pmedia) NO="4" ;;
-						pflash) NO="5" ;;
-						pnavigation) NO="6" ;;
-						pvoicedial) NO="7" ;;
-						pvvm) NO="8" ;;
-						pvoip) NO="9" ;;
-						pdefaultapp) NO="10" ;;
-						peffects) NO="11" ;;
-						pDTMF) NO="12" ;;
-						pcalendar) NO="13" ;;
-						palarm) NO="14" ;;
-					esac
+      sleep 2
+    fi
 
-					if [ ! -z "${NO}" ]; then
-						${DIR}/papctl "C ${NO} 0 0"
-					fi
-				done
-			fi
+    /usr/bin/pactl load-module module-alsa-sink device=hw:1 sink_name=usb mmap=1 tsched=1 channels=2 >/tmp/papctl-usbmod
 
-			sleep 1
+    if [ "${?}" == "0" ]; then
+      sleep 2
 
-			if [ -e "/tmp/papctl-module" ]; then
-				/usr/bin/pactl unload-module ${CUR_MODULE}
+      echo ${VSINKS} >/tmp/papctl-vsinks
 
-				sleep 2
-			fi
+      echo ${VSINKS} | sed s/","/"\n"/g >/tmp/papctl-list
 
-			/usr/bin/pactl load-module module-tunnel-sink server=${SERVER} sink_name=wifi >/tmp/papctl-module
+      cat /tmp/papctl-list | while read SINK ; do
+        ID=$(get_vsink_id ${SINK})
+ 
+        if [ ! -z "${ID}" ]; then
+          ${DIR}/papctl "O ${ID} 2 0"
+        fi
+      done
+    else
+      echo "Module load error"
 
-			if [ "${?}" == "0" ]; then
-				sleep 5
+      rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+      rm -f /tmp/papctl-usbmod >/dev/null 2>&1
+    fi
+    ;;
 
-				/usr/bin/pactl list | grep -q "wifi"
+  usboff)
+    touch /tmp/papctl-lock
 
-				if [ "${?}" == "0" ]; then
-					echo ${VSINKS} >/tmp/papctl-vsinks
+    if [ -e "/tmp/papctl-vsinks" ]; then
+      if [ ! -e "/tmp/papctl-netmod" ]; then
+        cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
 
-					echo ${VSINKS} | sed s/","/"\n"/g >/tmp/papctl-list
+        cat /tmp/papctl-list | while read SINK ; do
+          ID=$(get_vsink_id ${SINK})
+ 
+          if [ ! -z "${ID}" ]; then
+            ${DIR}/papctl "C ${ID} 0 0"
+          fi
+        done
+      fi
+    fi
 
-					cat /tmp/papctl-list | while read SINK ; do
-						NO=""
+    if [ -e "/tmp/papctl-usbmod" ]; then
+      USB_MODULE=$(cat /tmp/papctl-usbmod)
 
-						case ${SINK} in
-							palerts) NO="0" ;;
-							pnotifications) NO="1" ;;
-							pfeedback) NO="2" ;;
-							pringtones) NO="3" ;;
-							pmedia) NO="4" ;;
-							pflash) NO="5" ;;
-							pnavigation) NO="6" ;;
-							pvoicedial) NO="7" ;;
-							pvvm) NO="8" ;;
-							pvoip) NO="9" ;;
-							pdefaultapp) NO="10" ;;
-							peffects) NO="11" ;;
-							pDTMF) NO="12" ;;
-							pcalendar) NO="13" ;;
-							palarm) NO="14" ;;
-						esac
+      /usr/bin/pactl unload-module ${USB_MODULE}
 
-						if [ ! -z "${NO}" ]; then
-							${DIR}/papctl "O ${NO} 3 0"
-						fi
-					done
-				else
-					echo "Connection error"
+      sleep 2
+    fi
 
-					CUR_MODULE=$(cat /tmp/papctl-module)
+    rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+    rm -f /tmp/papctl-usbmod >/dev/null 2>&1
+    ;;
 
-					/usr/bin/pactl unload-module ${CUR_MODULE}
+  connect)
+    if [ -z "${2}" ]; then
+      exit 1
+    fi
 
-					sleep 2
+    touch /tmp/papctl-lock
 
-					rm -f /tmp/papctl-module
-					rm -f /tmp/papctl-server
-					rm -f /tmp/papctl-vsinks
-				fi
-			else
-				echo "Module load error"
+    SERVER="${2}" ; VSINKS="${3}"
 
-				rm -f /tmp/papctl-module
-				rm -f /tmp/papctl-server
-				rm -f /tmp/papctl-vsinks
-			fi
-		elif [ "${VSINKS}" != "${CUR_VSINKS}" ]; then
-			if [ -e "/tmp/papctl-vsinks" ]; then
-				cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
+    CUR_SERVER="" ; NET_MODULE="" ; CUR_VSINKS=""
 
-				cat /tmp/papctl-list | while read SINK ; do
-					NO=""
+    if [ -e "/tmp/papctl-server" ]; then
+      CUR_SERVER=$(cat /tmp/papctl-server)
+    fi
 
-					case ${SINK} in
-						palerts) NO="0" ;;
-						pnotifications) NO="1" ;;
-						pfeedback) NO="2" ;;
-						pringtones) NO="3" ;;
-						pmedia) NO="4" ;;
-						pflash) NO="5" ;;
-						pnavigation) NO="6" ;;
-						pvoicedial) NO="7" ;;
-						pvvm) NO="8" ;;
-						pvoip) NO="9" ;;
-						pdefaultapp) NO="10" ;;
-						peffects) NO="11" ;;
-						pDTMF) NO="12" ;;
-						pcalendar) NO="13" ;;
-						palarm) NO="14" ;;
-					esac
+    if [ -e "/tmp/papctl-netmod" ]; then
+      NET_MODULE=$(cat /tmp/papctl-netmod)
+    fi
 
-					if [ ! -z "${NO}" ]; then
-						${DIR}/papctl "C ${NO} 0 0"
-					fi
-				done
-			fi
+    if [ -e "/tmp/papctl-vsinks" ]; then
+      CUR_VSINKS=$(cat /tmp/papctl-vsinks)
+    fi
 
-			echo ${VSINKS} >/tmp/papctl-vsinks
+    if [ "${SERVER}" != "${CUR_SERVER}" ]; then
+      echo "${SERVER}" >/tmp/papctl-server
 
-			echo ${VSINKS} | sed s/","/"\n"/g >/tmp/papctl-list
+      if [ -e "/tmp/papctl-vsinks" ]; then
+        cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
 
-			cat /tmp/papctl-list | while read SINK ; do
-				NO=""
+        cat /tmp/papctl-list | while read SINK ; do
+          ID=$(get_vsink_id ${SINK})
 
-				case ${SINK} in
-					palerts) NO="0" ;;
-					pnotifications) NO="1" ;;
-					pfeedback) NO="2" ;;
-					pringtones) NO="3" ;;
-					pmedia) NO="4" ;;
-					pflash) NO="5" ;;
-					pnavigation) NO="6" ;;
-					pvoicedial) NO="7" ;;
-					pvvm) NO="8" ;;
-					pvoip) NO="9" ;;
-					pdefaultapp) NO="10" ;;
-					peffects) NO="11" ;;
-					pDTMF) NO="12" ;;
-					pcalendar) NO="13" ;;
-					palarm) NO="14" ;;
-				esac
+          if [ ! -z "${ID}" ]; then
+            ${DIR}/papctl "C ${ID} 0 0"
+          fi
+        done
 
-				if [ ! -z "${NO}" ]; then
-					${DIR}/papctl "O ${NO} 3 0"
-				fi
-			done
-		fi
-		;;
+        sleep 1
+      fi
 
-	disconnect)
-		touch /tmp/papctl-lock
+      if [ -e "/tmp/papctl-netmod" ]; then
+        /usr/bin/pactl unload-module ${NET_MODULE}
 
-		if [ -e "/tmp/papctl-vsinks" ]; then
-			cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
+        sleep 2
+      fi
 
-			cat /tmp/papctl-list | while read SINK ; do
-				NO=""
+      /usr/bin/pactl load-module module-tunnel-sink server=${SERVER} sink_name=wifi >/tmp/papctl-netmod
 
-				case ${SINK} in
-					palerts) NO="0" ;;
-					pnotifications) NO="1" ;;
-					pfeedback) NO="2" ;;
-					pringtones) NO="3" ;;
-					pmedia) NO="4" ;;
-					pflash) NO="5" ;;
-					pnavigation) NO="6" ;;
-					pvoicedial) NO="7" ;;
-					pvvm) NO="8" ;;
-					pvoip) NO="9" ;;
-					pdefaultapp) NO="10" ;;
-					peffects) NO="11" ;;
-					pDTMF) NO="12" ;;
-					pcalendar) NO="13" ;;
-					palarm) NO="14" ;;
-				esac
+      if [ "${?}" == "0" ]; then
+        sleep 5
 
-				if [ ! -z "${NO}" ]; then
-					${DIR}/papctl "C ${NO} 0 0"
-				fi
-			done
-		fi
+        /usr/bin/pactl list | grep -q "wifi"
 
-		if [ -e "/tmp/papctl-module" ]; then
-			CUR_MODULE=$(cat /tmp/papctl-module)
+        if [ "${?}" == "0" ]; then
+          echo ${VSINKS} >/tmp/papctl-vsinks
 
-			/usr/bin/pactl unload-module ${CUR_MODULE}
+          echo ${VSINKS} | sed s/","/"\n"/g >/tmp/papctl-list
 
-			sleep 2
+          cat /tmp/papctl-list | while read SINK ; do
+            ID=$(get_vsink_id ${SINK})
 
-			rm -f /tmp/papctl-module
-			rm -f /tmp/papctl-server
-			rm -f /tmp/papctl-vsinks
-		fi
-		;;
+            if [ ! -z "${ID}" ]; then
+              ${DIR}/papctl "O ${ID} 3 0"
+            fi
+          done
+        else
+          echo "Connection error"
 
-	enable)
-		touch /tmp/papctl-lock
+          NET_MODULE=$(cat /tmp/papctl-netmod)
 
-		if [ ! -e "/tmp/papctl-listen" ]; then
-			/usr/bin/pactl load-module module-native-protocol-tcp auth-anonymous=1 >/tmp/papctl-listen
+          /usr/bin/pactl unload-module ${NET_MODULE}
 
-			sleep 2
-		fi
-		;;
+          sleep 2
 
-	disable)
-		touch /tmp/papctl-lock
+          rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+          rm -f /tmp/papctl-netmod >/dev/null 2>&1
+          rm -f /tmp/papctl-server >/dev/null 2>&1
+        fi
+      else
+        echo "Module load error"
 
-		if [ -e "/tmp/papctl-listen" ]; then
-			CUR_LISTEN=$(cat /tmp/papctl-listen)
+        rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+        rm -f /tmp/papctl-netmod >/dev/null 2>&1
+        rm -f /tmp/papctl-server >/dev/null 2>&1
+      fi
+    elif [ "${VSINKS}" != "${CUR_VSINKS}" ]; then
+      if [ -e "/tmp/papctl-vsinks" ]; then
+        cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
 
-			/usr/bin/pactl unload-module ${CUR_LISTEN}
+        cat /tmp/papctl-list | while read SINK ; do
+          ID=$(get_vsink_id ${SINK})
 
-			rm -f /tmp/papctl-listen
+          if [ ! -z "${ID}" ]; then
+            ${DIR}/papctl "C ${ID} 0 0"
+          fi
+        done
+      fi
 
-			sleep 2
-		fi
-		;;
+      echo ${VSINKS} >/tmp/papctl-vsinks
+
+      echo ${VSINKS} | sed s/","/"\n"/g >/tmp/papctl-list
+
+      cat /tmp/papctl-list | while read SINK ; do
+        ID=$(get_vsink_id ${SINK})
+ 
+        if [ ! -z "${ID}" ]; then
+          ${DIR}/papctl "O ${ID} 3 0"
+        fi
+      done
+    fi
+    ;;
+
+  disconnect)
+    touch /tmp/papctl-lock
+
+    if [ -e "/tmp/papctl-vsinks" ]; then
+      if [ ! -e "/tmp/papctl-usbmod" ]; then
+        cat /tmp/papctl-vsinks | sed s/","/"\n"/g >/tmp/papctl-list
+
+        cat /tmp/papctl-list | while read SINK ; do
+          ID=$(get_vsink_id ${SINK})
+
+          if [ ! -z "${ID}" ]; then
+            ${DIR}/papctl "C ${ID} 0 0"
+          fi
+        done
+      fi
+    fi
+
+    if [ -e "/tmp/papctl-netmod" ]; then
+      NET_MODULE=$(cat /tmp/papctl-netmod)
+
+      /usr/bin/pactl unload-module ${NET_MODULE}
+
+      sleep 2
+    fi
+
+    rm -f /tmp/papctl-vsinks >/dev/null 2>&1
+    rm -f /tmp/papctl-netmod >/dev/null 2>&1
+    rm -f /tmp/papctl-server >/dev/null 2>&1
+    ;;
+
+  enable)
+    touch /tmp/papctl-lock
+
+    if [ ! -e "/tmp/papctl-listen" ]; then
+      /usr/bin/pactl load-module module-native-protocol-tcp auth-anonymous=1 >/tmp/papctl-listen
+
+      sleep 2
+    fi
+    ;;
+
+  disable)
+    touch /tmp/papctl-lock
+
+    if [ -e "/tmp/papctl-listen" ]; then
+      CUR_LISTEN=$(cat /tmp/papctl-listen)
+
+      /usr/bin/pactl unload-module ${CUR_LISTEN}
+
+      sleep 2
+    fi
+
+    rm -f /tmp/papctl-listen >/dev/null 2>&1
+    ;;
 esac
 
 rm -f /tmp/papctl-list >/dev/null 2>&1

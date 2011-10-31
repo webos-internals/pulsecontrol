@@ -105,7 +105,7 @@ ControlAssistant.prototype.init = function(future, config, args) {
 };
 
 ControlAssistant.prototype.reset = function(future, config, args) {
-	var cmd = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh reset";
+	var cmd = "sh " + SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh reset";
 
 	exec(cmd, function(future, error, stdout, stderr) {
 		if(error !== null) { 
@@ -127,58 +127,80 @@ ControlAssistant.prototype.reset = function(future, config, args) {
 //
 
 ControlAssistant.prototype.apply = function(future, config, args) {
-	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
+	var bin = "sh " + SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
-	if(config.tcpServer) {
-		var method = "create";
-
-		var activity = {
-			"start" : true,
-			"replace": true,
-			"activity": {
-				"name": "firewall",
-				"description" : "Open PulseAudio Port",
-				"type": {"cancellable": true, "foreground": true, "persist": false},
-				"trigger" : {
-					"method" : "palm://com.palm.firewall/control",
-					"params" : {'subscribe': true, "rules": [
-						{"protocol": "TCP", "destinationPort": 4713}]}
-				},
-				"callback" : {
-					"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
-					"params" : {"action":"none"}
-				}
-			}
-		};
+	if(config.usbAudio) {
+		var sinks = config.usbSinks.toString();	
 		
-		future.nest(this.execute(bin + " enable"));
+		future.nest(this.execute(bin + " usbon " + sinks));
 	} else {
-		var method = "cancel";
-
-		var activity = { activityName: "firewall" };
-		
-		future.nest(this.execute(bin + " disable"));
+		future.nest(this.execute(bin + " usboff"));
 	}
 	
 	future.then(this, function(future) {
-		future.nest(PalmCall.call("palm://com.palm.activitymanager", method, activity));
+		var stdout = future.result.stdout;
+	
+		if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
+			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "usb"}}));
+		} else {
+			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
+				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+		}
 		
-		future.then(this, function(future) {
-			var exception = future.exception;
-		
-			future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
+		future.then(this, function(future) {				
+			if((!config.usbAudio) && (config.tcpServer)) {
+				var method = "create";
 
+				var activity = {
+					"start" : true,
+					"replace": true,
+					"activity": {
+						"name": "firewall",
+						"description" : "Open PulseAudio Port",
+						"type": {"cancellable": true, "foreground": true, "persist": false},
+						"trigger" : {
+							"method" : "palm://com.palm.firewall/control",
+							"params" : {'subscribe': true, "rules": [
+								{"protocol": "TCP", "destinationPort": 4713}]}
+						},
+						"callback" : {
+							"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
+							"params" : {"action":"none"}
+						}
+					}
+				};
+		
+				future.nest(this.execute(bin + " enable"));
+			} else {
+				var method = "cancel";
+
+				var activity = { activityName: "firewall" };
+		
+				future.nest(this.execute(bin + " disable"));
+			}
+	
 			future.then(this, function(future) {
-				if(future.result.wifi) {
-					args.wifi = future.result.wifi;
+				future.nest(PalmCall.call("palm://com.palm.activitymanager", method, activity));
+		
+				future.then(this, function(future) {
+					var exception = future.exception;
+		
+					future.nest(PalmCall.call("palm://com.palm.connectionmanager", "getstatus", {}));
 
-					this.check(future, config, args);
-				} else {
-					future.result = { returnValue: true };
-				}
-			});			
+					future.then(this, function(future) {
+						if(future.result.wifi) {
+							args.wifi = future.result.wifi;
+
+							this.check(future, config, args);
+						} else {
+							future.result = { returnValue: true };
+						}
+					});			
+				});
+			});		
 		});
-	});		
+	});
 };
 
 ControlAssistant.prototype.check = function(future, config, args) {
@@ -187,15 +209,17 @@ ControlAssistant.prototype.check = function(future, config, args) {
 	if((args.wifi.state == "connected") && (args.wifi.ssid)) {
 		var ssid = args.wifi.ssid.toLowerCase();
 
-		for(var i = 0; i < config.paServers.length; i++) {
-			if(config.paServers[i].ssid.toLowerCase() == ssid) {
-				sinks = config.wifiSinks.toString();
+		if(!config.usbAudio) {
+			for(var i = 0; i < config.paServers.length; i++) {
+				if(config.paServers[i].ssid.toLowerCase() == ssid) {
+					sinks = config.wifiSinks.toString();
 
-				addr = config.paServers[i].address;
+					addr = config.paServers[i].address;
 
-				mode = config.paServers[i].mode;
+					mode = config.paServers[i].mode;
 								
-				break;				
+					break;				
+				}
 			}
 		}
 	}
@@ -210,9 +234,9 @@ ControlAssistant.prototype.check = function(future, config, args) {
 				future.result = { returnValue: true };
 			});
 		} else {
-			if((addr != null) && (sinks != null)) {
-				args = {address: addr, sinks: sinks};
+			args = {address: addr, sinks: sinks};
 
+			if((addr != null) && (sinks != null)) {
 				this.connect(future, config, args);
 			} else {
 				this.disconnect(future, config, args);
@@ -226,26 +250,24 @@ ControlAssistant.prototype.check = function(future, config, args) {
 //
 
 ControlAssistant.prototype.connect = function(future, config, args) {
-	if((args.address) && (args.sinks)) {
-		var addr = args.address, sinks = args.sinks;
-	
-		var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
+	if((!config.usbAudio) && (args.address) && (args.sinks)) {
+		var bin = "sh " + SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
-		future.nest(this.execute(bin + " connect " + addr + " " + sinks));
+		future.nest(this.execute(bin + " connect " + args.address + " " + args.sinks));
 
 		future.then(this, function(future) {
 			var stdout = future.result.stdout;
 		
 			if((stdout) && (stdout.slice(0, 16) == "Connection error")) {
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error"}}));
+					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "net"}}));
 			} else if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "net"}}));
 			} else {			
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
 					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "auto",
-						'address': addr, 'sinks': sinks}}));
+						'address': args.address, 'sinks': args.sinks}}));
 			}
 						
 			future.then(this, function(future) {
@@ -258,19 +280,17 @@ ControlAssistant.prototype.connect = function(future, config, args) {
 };
 
 ControlAssistant.prototype.disconnect = function(future, config, args) {
-	var addr = args.address, sinks = args.sinks;
-
-	var bin = SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
+	var bin = "sh " + SERVICES_DIR + "/" + SERVICE_ID + "/bin/papctl.sh";
 
 	future.nest(this.execute(bin + " disconnect"));
 
 	future.then(this, function(future) {
 		var stdout = future.result.stdout;
 
-		if((addr != undefined) && (sinks != undefined)) {
+		if((args.address) && (args.sinks)) {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
 				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
-				'address': addr, 'sinks': sinks}}));
+				'address': args.address, 'sinks': args.sinks}}));
 		} else {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
 				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));

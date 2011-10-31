@@ -6,6 +6,7 @@ enyo.kind({
 	_ready: false,
 	
 	_prefs: {
+		_kind: "org.webosinternals.pulsecontrol:1",
 		usbAudio: false, 
 		paServers: [], 
 		tcpServer: false, 
@@ -45,7 +46,7 @@ enyo.kind({
 						{content: $L("Loading PulseAudio Settings...")}
 				]},
 				{kind:"Control", name:"prefView", className:"box-center enyo-bg", components: [                               
-					{layoutKind: "VFlexLayout", align: "center", style: "min-width: 100%;", components: [
+					{layoutKind: "VFlexLayout", align: "left", style: "min-width: 100%;", components: [
 					  	{name: "usbSettings", layoutKind: "HFlexLayout", align: "center", style: "width: 500px;max-width: 100%;", components: [
 							{kind: "RowGroup", flex: 1, caption: "USB Audio Settings", components: [
 								{kind: "Item", layoutKind: "HFlexLayout", align: "center", flex: 1, tapHighlight: true, components: [
@@ -54,6 +55,8 @@ enyo.kind({
 								]}
 							]}
 						]},
+						
+						{name: "usbInformation", content: "Note: network audio is disabled while USB audio is enabled.", className: "enyo-item-secondary", style: "margin-left: 5px;margin-bottom: 2px;"},
 						
 					  	{layoutKind: "HFlexLayout", align: "center", style: "width: 500px;max-width: 100%;", components: [
 							{kind: "RowGroup", flex: 1, caption: "Network Client Settings", components: [
@@ -83,13 +86,16 @@ enyo.kind({
 								]},
 							]},
 						]},
-						
+
+						{style: "padding-top:0px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
+							{kind: "Button", className: "enyo-button-light", width: "488px", caption: "Show Audio Sources", onclick: "handleEditAdvanced"},
+						]},
+
 						{style: "padding-top:6px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
 							{name: "applySettingsButton", kind: "Button", className: "enyo-button-affirmative", width: "488px", caption: "Apply Configuration", onclick: "handleApplySettings"},
 						]},
-						{style: "padding-top:0px;padding-bottom:6px;padding-left:3px;padding-right: 8px;max-width:100%;-webkit-box-sizing: border-box;", components: [
-							{kind: "Button", className: "enyo-button-light", width: "488px", caption: "Show Audio Sources", onclick: "handleEditAdvanced"},
-						]}
+
+						{content: "You need to apply settings after changing the above settings.", className: "enyo-item-secondary", style: "margin-left: 5px;margin-bottom: 2px;"}
 					]},
 				]},
 
@@ -223,10 +229,11 @@ enyo.kind({
 	create: function() {
 		this.inherited(arguments);
 
-		this.$.usbSettings.hide();
-
-		if(enyo.fetchDeviceInfo().modelNameAscii != "TouchPad") {
+		if((enyo.fetchDeviceInfo().modelNameAscii != "TouchPad") &&
+			(enyo.fetchDeviceInfo().modelNameAscii != "Emulator"))
+		{
 			this.$.usbSettings.hide();
+			this.$.usbInformation.hide();
 			
 			for(var i = 0; i < this._sinks.length; i++)
 				this.$[this._sinks[i]].items.splice(2, 2);
@@ -287,7 +294,7 @@ enyo.kind({
 	},
 
 	handlePrefsSaved: function(inSender, inResponse) {
-		if	(inResponse.results.length === 1) {
+		if(inResponse.results.length === 1) {
 			this._prefs._id = inResponse.results[0].id;
 						
 			this._prefs._rev = inResponse.results[0].rev;
