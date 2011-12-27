@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SID="org.webosinternals.pulsecontrol.srv"
+SID="org.webosinternals.pulseaudio.settings.srv"
 
 APPS="/media/cryptofs/apps"
 

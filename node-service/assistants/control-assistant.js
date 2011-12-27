@@ -8,9 +8,9 @@ var DB = Foundations.Data.DB;
 	
 var exec = IMPORTS.require('child_process').exec;
 
-var DB_KIND = "org.webosinternals.pulsecontrol:1";
+var DB_KIND = "org.webosinternals.pulseaudio.settings:1";
 
-var SERVICE_ID = "org.webosinternals.pulsecontrol.srv";
+var SERVICE_ID = "org.webosinternals.pulseaudio.settings.srv";
 
 var SERVICES_DIR = "/media/cryptofs/apps/usr/palm/services";
 
@@ -81,7 +81,7 @@ ControlAssistant.prototype.init = function(future, config, args) {
 				"params" : {'subscribe': true}
 			},
 			"callback" : {
-				"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
+				"method" : "palm://org.webosinternals.pulseaudio.settings.srv/control",
 				"params" : {"action": "check"}
 			}
 		}
@@ -115,7 +115,7 @@ ControlAssistant.prototype.reset = function(future, config, args) {
 		}
 		else {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "none"}}));
 		
 			future.then(this, function(future) {
 				future.result = { returnValue: true };
@@ -142,10 +142,10 @@ ControlAssistant.prototype.apply = function(future, config, args) {
 	
 		if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "usb"}}));
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "error", "reason": "usb"}}));
 		} else {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "none"}}));
 		}
 		
 		future.then(this, function(future) {				
@@ -165,7 +165,7 @@ ControlAssistant.prototype.apply = function(future, config, args) {
 								{"protocol": "TCP", "destinationPort": 4713}]}
 						},
 						"callback" : {
-							"method" : "palm://org.webosinternals.pulsecontrol.srv/control",
+							"method" : "palm://org.webosinternals.pulseaudio.settings.srv/control",
 							"params" : {"action":"none"}
 						}
 					}
@@ -227,7 +227,7 @@ ControlAssistant.prototype.check = function(future, config, args) {
 	if((args.wifi.state == "connected") || (args.wifi.state == "disconnected")) {
 		if((addr != null) && (sinks != null) && (mode == "manual")) {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "manual",
 					'address': addr, 'sinks': sinks}}));
 
 			future.then(this, function(future) {
@@ -260,13 +260,13 @@ ControlAssistant.prototype.connect = function(future, config, args) {
 		
 			if((stdout) && (stdout.slice(0, 16) == "Connection error")) {
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "net"}}));
+					'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "error", "reason": "net"}}));
 			} else if((stdout) && (stdout.slice(0, 17) == "Module load error")) {
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "error", "reason": "net"}}));
+					'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "error", "reason": "net"}}));
 			} else {			
 				future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-					'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "auto",
+					'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "auto",
 						'address': args.address, 'sinks': args.sinks}}));
 			}
 						
@@ -289,11 +289,11 @@ ControlAssistant.prototype.disconnect = function(future, config, args) {
 
 		if((args.address) && (args.sinks)) {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "manual",
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "manual",
 				'address': args.address, 'sinks': args.sinks}}));
 		} else {
 			future.nest(PalmCall.call("palm://com.palm.applicationManager/", "launch", {
-				'id': "org.webosinternals.pulsecontrol", 'params': {'dashboard': "none"}}));
+				'id': "org.webosinternals.pulseaudio.settings", 'params': {'dashboard': "none"}}));
 		}
 				
 		future.then(this, function(future) {

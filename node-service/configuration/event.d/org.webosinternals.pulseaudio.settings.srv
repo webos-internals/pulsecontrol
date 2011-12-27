@@ -9,5 +9,5 @@ script
 	
 	sleep 15
 	
-	luna-send -n 1 palm://org.webosinternals.pulsecontrol.srv/control '{"action":"init"}'
+	luna-send -n 1 palm://org.webosinternals.pulseaudio.settings.srv/control '{"action":"init"}'
 end script

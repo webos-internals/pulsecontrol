@@ -6,7 +6,7 @@ enyo.kind({
 	_ready: false,
 	
 	_prefs: {
-		_kind: "org.webosinternals.pulsecontrol:1",
+		_kind: "org.webosinternals.pulseaudio.settings:1",
 		usbAudio: false, 
 		paServers: [], 
 		tcpServer: false, 
@@ -219,11 +219,11 @@ enyo.kind({
 			]}
 		]},
 
-		{name: 'pulseControlSrv', kind: 'PalmService', service: 'palm://org.webosinternals.pulsecontrol.srv', method: 'control',
+		{name: 'pulseaudio.settingsSrv', kind: 'PalmService', service: 'palm://org.webosinternals.pulseaudio.settings.srv', method: 'control',
 			onSuccess: "handleServiceSuccess", onFailure: "handleServiceFailure"},
 		
-		{name: "loadPreferences", kind: "DbService", dbKind: "org.webosinternals.pulsecontrol:1", method: "find", onSuccess: "handlePrefsLoaded"},
-		{name: "savePreferences", kind: "DbService", dbKind: "org.webosinternals.pulsecontrol:1", method: "put", onSuccess: "handlePrefsSaved"}		
+		{name: "loadPreferences", kind: "DbService", dbKind: "org.webosinternals.pulseaudio.settings:1", method: "find", onSuccess: "handlePrefsLoaded"},
+		{name: "savePreferences", kind: "DbService", dbKind: "org.webosinternals.pulseaudio.settings:1", method: "put", onSuccess: "handlePrefsSaved"}		
 	],
 
 	create: function() {
@@ -250,7 +250,7 @@ enyo.kind({
 		this.$.controlDashboard.setLayers([]);
 
 		if(topLayer.action) {
-			this.$.pulseControlSrv.call({action: topLayer.action, address: topLayer.address, sinks: topLayer.sinks});
+			this.$.pulseaudio.settingsSrv.call({action: topLayer.action, address: topLayer.address, sinks: topLayer.sinks});
 		}		
 	},
 
@@ -306,7 +306,7 @@ enyo.kind({
 	restartPulseAudio: function(inSender, inEvent) {
 		this.$.applySettingsButton.setDisabled(true);
 
-		this.$.pulseControlSrv.call({action: "reset"});
+		this.$.pulseaudio.settingsSrv.call({action: "reset"});
 	},
 
 	handleServiceSuccess: function() {
@@ -324,7 +324,7 @@ enyo.kind({
 
 		this.$.applySettingsButton.setDisabled(true);
 		
-		this.$.pulseControlSrv.call({action: "apply"});
+		this.$.pulseaudio.settingsSrv.call({action: "apply"});
 	},
 
 	handleEditAdvanced: function(inSender, inEvent) {

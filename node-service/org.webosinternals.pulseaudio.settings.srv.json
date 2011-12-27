@@ -2,11 +2,11 @@
   "role": {
      "exeName":"js",
      "type": "privileged",
-     "allowedNames": ["org.webosinternals.pulsecontrol.srv"]
+     "allowedNames": ["org.webosinternals.pulseaudio.settings.srv"]
   },
   "permissions": [
     {
-      "service":"org.webosinternals.pulsecontrol.srv",
+      "service":"org.webosinternals.pulseaudio.settings.srv",
       "inbound":["*"],
       "outbound":["*"]
     }

@@ -1,4 +1,4 @@
-APPID = org.webosinternals.pulsecontrol
+APPID = org.webosinternals.pulseaudio.settings
 
 package: clean
 	cp -a c-binary node-service/bin

@@ -1,8 +1,8 @@
 {
-	"id": "org.webosinternals.pulsecontrol.srv",
+	"id": "org.webosinternals.pulseaudio.settings.srv",
 	"description": "PulseAudio Control Service",
 	"services": [ {
-		"name": "org.webosinternals.pulsecontrol.srv",
+		"name": "org.webosinternals.pulseaudio.settings.srv",
 		"description": "PulseAudio Control Service",
 		"assistant": "ServiceAssistant",
 

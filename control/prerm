@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SID="org.webosinternals.pulsecontrol.srv"
+SID="org.webosinternals.pulseaudio.settings.srv"
 
 APPS="/media/cryptofs/apps"
 
@@ -40,10 +40,10 @@ rm -f /var/palm/ls2/services/pub/${SID}.service
 # Cleanup the JS service here due to WebOS bugs
 #
 
-rm -f /var/cache/configurator/*webosinternals.pulsecontrol*
+rm -f /var/cache/configurator/*webosinternals.pulseaudio.settings*
 
-rm -f /var/palm/ls2/roles/*/*webosinternals.pulsecontrol*
+rm -f /var/palm/ls2/roles/*/*webosinternals.pulseaudio.settings*
 
-rm -f /var/palm/ls2/services/*/*webosinternals.pulsecontrol*
+rm -f /var/palm/ls2/services/*/*webosinternals.pulseaudio.settings*
 
 exit 0
